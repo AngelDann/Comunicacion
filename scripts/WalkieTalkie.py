@@ -3,9 +3,11 @@ from scipy.io import wavfile
 import os
 
 class WalkieTalkie:
-    def __init__(self):
+    def __init__(self, new_canal):
         self.bits = 16
-        self.frecuencia_portadora = 3e+7
+        self.canal = new_canal
+        self.frequencia_portadora = 3e+10
+
 
     #Recibe un archivo stereo que transforma a mono para transmitir la informacion usando la frecuencia portadora
     def FuenteInformacion(self, archivo_audio):
@@ -61,3 +63,22 @@ class WalkieTalkie:
         except Exception as e:
             print(f"Error al reproducir el audio: {e}")
 
+
+    def get_canal(self):
+        return self.canal
+
+    def set_frecuencia_portadora(self):
+        frequency_table = {
+            1: 154.570,  # Frecuencia en MHz para el canal 1
+            2: 154.600,  # Frecuencia en MHz para el canal 2
+            3: 154.630,  # Frecuencia en MHz para el canal 3
+            4: 154.660,  # Frecuencia en MHz para el canal 4
+            5: 154.690   # Frecuencia en MHz para el canal 5
+        }
+        if self.canal in frequency_table:
+            self.frequencia_portadora = frequency_table[self.canal]
+        else:
+            self.frequencia_portadora = "Undefined"
+
+    def get_frecuencia_portadora(self):
+        return self.frequencia_portadora

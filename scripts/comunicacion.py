@@ -1,8 +1,7 @@
 
 from WalkieTalkie import WalkieTalkie
 
-# Uso de la clase WalkieTalkie
-walkie = WalkieTalkie()
+walkie = WalkieTalkie(1)
 
 rate,audio_data = walkie.FuenteInformacion("scripts/guitar.wav")
 
@@ -10,4 +9,6 @@ rate,audio_data = walkie.FuenteInformacion("scripts/guitar.wav")
 walkie.BotonTransmitir(rate,audio_data)
 
 # Recepción
-walkie.BotonRecibir('audio_modulado.wav')
+walkie.BotonRecibir('scripts/audios/audio_modulado.wav')
+
+walkie.reproducir('scripts/audios/audio_recibido.wav')
