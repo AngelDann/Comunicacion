@@ -3,10 +3,11 @@ from scipy.io import wavfile
 import os
 
 class WalkieTalkie:
-    def __init__(self, new_canal):
+    def __init__(self, potencia=0.5, distancia_referencia=5000):
         self.bits = 16
-        self.canal = new_canal
-        self.frequencia_portadora = 3e+10
+        self.potencia = potencia
+        self.distancia_referencia = distancia_referencia
+        self.frequencia_portadora = 3e+7 #Frecuencia AM
 
 
     #Recibe un archivo stereo que transforma a mono para transmitir la informacion usando la frecuencia portadora
@@ -21,7 +22,7 @@ class WalkieTalkie:
         audio_data_quantized = np.round(audio_data_normalized * (2**(self.bits - 1))).astype(np.int16)
 
         tiempo = np.arange(len(audio_data)) / rate
-        portadora = np.cos(2 * np.pi * self.frecuencia_portadora * tiempo)
+        portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
 
         # Modulación
         señal_modulada = audio_data_quantized * portadora
@@ -29,12 +30,14 @@ class WalkieTalkie:
         audio_nombre = 'scripts/audios/audio_modulado.wav'
         wavfile.write( audio_nombre, rate, señal_modulada.astype(np.int16))
         print(f"Archivo {audio_nombre} guardado")
+        
+        return rate,señal_modulada
 
     def BotonRecibir(self, audio_nombre):
         rate_received, señal_modulada_mono = wavfile.read(audio_nombre)
 
         tiempo = np.arange(len(señal_modulada_mono)) / rate_received
-        portadora = np.cos(2 * np.pi * self.frecuencia_portadora * tiempo)
+        portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
 
         # Demodulación
         señal_demodulada = señal_modulada_mono / portadora
@@ -63,22 +66,11 @@ class WalkieTalkie:
         except Exception as e:
             print(f"Error al reproducir el audio: {e}")
 
-
-    def get_canal(self):
-        return self.canal
-
-    def set_frecuencia_portadora(self):
-        frequency_table = {
-            1: 154.570,  # Frecuencia en MHz para el canal 1
-            2: 154.600,  # Frecuencia en MHz para el canal 2
-            3: 154.630,  # Frecuencia en MHz para el canal 3
-            4: 154.660,  # Frecuencia en MHz para el canal 4
-            5: 154.690   # Frecuencia en MHz para el canal 5
-        }
-        if self.canal in frequency_table:
-            self.frequencia_portadora = frequency_table[self.canal]
-        else:
-            self.frequencia_portadora = "Undefined"
-
     def get_frecuencia_portadora(self):
         return self.frequencia_portadora
+
+    def get_potencia(self):
+        return self.potencia
+    
+    def get_distancia_referencia(self):
+        return self.distancia_referencia
