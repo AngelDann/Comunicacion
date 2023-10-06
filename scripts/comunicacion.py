@@ -13,7 +13,7 @@ walkie2 = WalkieTalkie(1, random.randint(500,2500))
 print("Frecuencia de Walkie-Talkies: Walkie1=", walkie1.get_frecuencia_portadora(), "Walkie2=",walkie2.get_frecuencia_portadora())
 
 #Fuente de Informacion
-rate,audio_data = walkie1.FuenteInformacion("scripts/guitar.wav")
+rate,audio_data = walkie1.FuenteInformacion("scripts/audio_extendido.wav")
 
 # Transmisión
 rate,señal_modulada = walkie1.BotonTransmitir(rate,audio_data)

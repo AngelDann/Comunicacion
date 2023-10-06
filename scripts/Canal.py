@@ -12,6 +12,7 @@ class Canal:
 
         self.atenuacion = (potencia_fuente / potencia_receptor) * (distancia_receptor / distancia_fuente)
 
+
     def agregar_ruido(self, rate, señal_modulada):
         duracion_segmento = 0.001
         duracion_total = len(señal_modulada) / float(rate)
@@ -27,7 +28,7 @@ class Canal:
 
             if aleatorio in range(20,26):
                 num_aleatorios.append(0)
-                segmento_ruido = segmento / 2
+                segmento_ruido = segmento * 10
                 señal_transmitida.extend(segmento_ruido)
             else:
                 señal_transmitida.extend(segmento)
@@ -36,7 +37,6 @@ class Canal:
         num_aleatorios = np.array(num_aleatorios)
         conteos = np.unique(num_aleatorios, return_counts=True)
         longitud = len(num_aleatorios)
-        entropy_values = []
         shannon_entropy = 0
 
         for i in range(len(conteos[0])):
