@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.io import wavfile
 import os
-from anytree import Node, RenderTree
-import heapq
+from anytree import AnyNode, RenderTree, PreOrderIter
+from collections import Counter
 #import headp
 
 class WalkieTalkie:
@@ -11,6 +11,7 @@ class WalkieTalkie:
         self.potencia = potencia
         self.distancia_referencia = distancia_referencia
         self.frequencia_portadora = 3e+7 #Frecuencia AM
+        self.huffman_codes = {}
 
 
     #Recibe un archivo stereo que transforma a mono para transmitir la informacion usando la frecuencia portadora
@@ -27,33 +28,53 @@ class WalkieTalkie:
             if numero % i == 0:
                 divisores.append(i)
         return divisores[round(len(divisores)/2)]
-
-    def generarArbol(self, diccionario):
+    
+    def generarArbol(self, diccionario, longitud):
         diccionario_sort = dict(sorted(diccionario.items(), key=lambda item: item[1]))
+        
+        #for elemento, frecuencia in diccionario_sort.items():
+            #print(f"Elemento: {elemento}, Frecuencia: {(frecuencia/longitud) *100}")
+        
         cola = []
 
         for elemento, frecuencia in diccionario_sort.items():
-            nodo = Node(elemento, frecuencia=frecuencia)
+            nodo = AnyNode(id=elemento,
+                            izquierda=None,
+                            derecha=None,
+                            frecuencia=frecuencia, 
+                            )
             cola.append(nodo)
         
+        i = 0
         while len(cola) > 1:
             
             nodo_izquierda = cola.pop(0)
             nodo_derecha = cola.pop(0)
 
-            nuevo_nodo = Node(
-                f"{nodo_izquierda.name}{nodo_derecha.name}",
-                frecuencia=nodo_izquierda.frecuencia + nodo_derecha.frecuencia
+            nuevo_nodo = AnyNode(
+                id = f"{i}",
+                frecuencia=nodo_izquierda.frecuencia + nodo_derecha.frecuencia, 
+                izquierda = nodo_izquierda, 
+                derecha = nodo_derecha 
             )
             
-            nuevo_nodo.izquierda = nodo_izquierda
-            nuevo_nodo.derecha = nodo_derecha
+            #nuevo_nodo.izquierda = nodo_izquierda
+            #nuevo_nodo.derecha = nodo_derecha
 
             cola.append(nuevo_nodo)
+            i+=1
         
         arbol_huffman = cola[0]
 
         return arbol_huffman
+    
+    def get_huffman_codes(self, node, bits=""):
+        if node.izquierda is not None:
+            self.get_huffman_codes(node.izquierda, bits + '0')
+        if node.derecha is not None:
+            self.get_huffman_codes(node.derecha, bits + '1')
+        if len(str(node.id)) == 1:
+            self.huffman_codes[node.id] = bits
         
 
     def BotonTransmitir(self, rate, audio_data):
@@ -61,24 +82,38 @@ class WalkieTalkie:
         audio_data_normalized = audio_data / np.max(np.abs(audio_data))
         audio_data_quantized = np.round(audio_data_normalized * (2**(self.bits - 1))).astype(np.int16)
 
-        print("la mediana es",self.calcular_divisores(len(audio_data_quantized)), "la longitud es", len(audio_data_quantized))
-        
-        partes = self.calcular_divisores(len(audio_data_quantized))
-        print(type(audio_data_quantized))
+        #print("la mediana es",self.calcular_divisores(len(audio_data_quantized)), "la longitud es", len(audio_data_quantized))
+        longitud = len(audio_data_quantized)
+        frecuencia_maxima = self.calcular_divisores(longitud)
+        print("La frecuencia máxima es:", frecuencia_maxima)
 
-        audio_data_quantized_split = np.array_split(audio_data_quantized, partes)
+        audio_data_quantized_split = np.array_split(audio_data_quantized, frecuencia_maxima)
 
         #for elem in audio_data_quantized_split:
             #print(elem)
-
+    
         valores_unicos, frecuencias = np.unique(audio_data_quantized_split, return_counts=True)
         frecuencia_elementos = dict(zip(valores_unicos, frecuencias))
         
-        #for elemento, frecuencia in frecuencia_elementos.items():
-            #print(f"Elemento: {elemento}, Frecuencia: {frecuencia}")
+        #print(f"El valor que más se repite es {max_dic_porcentaje} con una frecuencia de {frecuencia_elementos[max_dic_porcentaje]} veces.")
 
-        arbol_huffman = self.generarArbol(frecuencia_elementos)
-        print(arbol_huffman)
+        #for elemento, frecuencia in frecuencia_elementos.items():
+            #print(f"Elemento: {elemento}, Frecuencia: {(frecuencia/len(audio_data_quantized_split))* 100}")
+
+        arbol_huffman = self.generarArbol(frecuencia_elementos, longitud)
+
+        nodos_contados = sum(1 for _ in RenderTree(arbol_huffman))
+
+        # Imprimir la cantidad de nodos
+        print(f"La cantidad de nodos en el árbol de Huffman es: {nodos_contados}")
+        print(RenderTree(arbol_huffman))
+
+        self.get_huffman_codes(arbol_huffman)
+        for char, code in self.huffman_codes.items():
+            print(f"Caracter: {char}, Codigo Huffman: {code}")
+
+        
+        #print(RenderTree(arbol_huffman))
 
         tiempo = np.arange(len(audio_data)) / rate
         portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
