@@ -29,7 +29,7 @@ class WalkieTalkie:
                 divisores.append(i)
         return divisores[round(len(divisores)/2)]
     
-    def generarArbol(self, diccionario, longitud):
+    def generarArbol(self, diccionario):
         diccionario_sort = dict(sorted(diccionario.items(), key=lambda item: item[1]))
         
         #for elemento, frecuencia in diccionario_sort.items():
@@ -39,9 +39,10 @@ class WalkieTalkie:
 
         for elemento, frecuencia in diccionario_sort.items():
             nodo = AnyNode(id=elemento,
+                           frecuencia=frecuencia,
                             izquierda=None,
                             derecha=None,
-                            frecuencia=frecuencia, 
+                            bits= None,
                             )
             cola.append(nodo)
         
@@ -52,10 +53,11 @@ class WalkieTalkie:
             nodo_derecha = cola.pop(0)
 
             nuevo_nodo = AnyNode(
-                id = f"{i}",
+                id = f"{str(nodo_izquierda.frecuencia) + str(nodo_derecha.frecuencia)}",
                 frecuencia=nodo_izquierda.frecuencia + nodo_derecha.frecuencia, 
                 izquierda = nodo_izquierda, 
-                derecha = nodo_derecha 
+                derecha = nodo_derecha,
+                bits = None
             )
             
             #nuevo_nodo.izquierda = nodo_izquierda
@@ -73,47 +75,56 @@ class WalkieTalkie:
             self.get_huffman_codes(node.izquierda, bits + '0')
         if node.derecha is not None:
             self.get_huffman_codes(node.derecha, bits + '1')
-        if len(str(node.id)) == 1:
-            self.huffman_codes[node.id] = bits
-        
+        if len(str(node.frecuencia)) == 1:
+            self.huffman_codes[node.frecuencia] = bits
+
+
 
     def BotonTransmitir(self, rate, audio_data):
         # Proceso de conversión ADC
         audio_data_normalized = audio_data / np.max(np.abs(audio_data))
         audio_data_quantized = np.round(audio_data_normalized * (2**(self.bits - 1))).astype(np.int16)
-
-        #print("la mediana es",self.calcular_divisores(len(audio_data_quantized)), "la longitud es", len(audio_data_quantized))
-        longitud = len(audio_data_quantized)
-        frecuencia_maxima = self.calcular_divisores(longitud)
-        print("La frecuencia máxima es:", frecuencia_maxima)
-
-        audio_data_quantized_split = np.array_split(audio_data_quantized, frecuencia_maxima)
-
-        #for elem in audio_data_quantized_split:
-            #print(elem)
-    
-        valores_unicos, frecuencias = np.unique(audio_data_quantized_split, return_counts=True)
-        frecuencia_elementos = dict(zip(valores_unicos, frecuencias))
-        
-        #print(f"El valor que más se repite es {max_dic_porcentaje} con una frecuencia de {frecuencia_elementos[max_dic_porcentaje]} veces.")
-
-        #for elemento, frecuencia in frecuencia_elementos.items():
-            #print(f"Elemento: {elemento}, Frecuencia: {(frecuencia/len(audio_data_quantized_split))* 100}")
-
-        arbol_huffman = self.generarArbol(frecuencia_elementos, longitud)
-
-        nodos_contados = sum(1 for _ in RenderTree(arbol_huffman))
-
-        # Imprimir la cantidad de nodos
-        print(f"La cantidad de nodos en el árbol de Huffman es: {nodos_contados}")
-        print(RenderTree(arbol_huffman))
-
-        self.get_huffman_codes(arbol_huffman)
-        for char, code in self.huffman_codes.items():
-            print(f"Caracter: {char}, Codigo Huffman: {code}")
-
         
         #print(RenderTree(arbol_huffman))
+        ##########################################################
+        # Supongamos que tienes una matriz NumPy
+        mi_matriz = np.array([[1, 2, 3],
+                            [1, 2, 3],
+                            [4, 5, 6],
+                            [1, 2, 3],
+                            [7, 8, 9]])
+
+        # Usando np.unique con axis para encontrar sublistas únicas
+        sublistas_unicas, indices, conteos = np.unique(mi_matriz, axis=0, return_index=True, return_counts=True)
+
+        # Crear un diccionario con las sublistas únicas y sus frecuencias
+        diccionario_sublistas = {}
+
+        for sublista, conteo in zip(sublistas_unicas, conteos):
+            diccionario_sublistas[tuple(sublista)] = conteo
+
+        # Imprimir el diccionario
+        print(diccionario_sublistas)
+
+        arbol = self.generarArbol(diccionario_sublistas)
+        print(RenderTree(arbol))
+
+        # Inicializa el diccionario de códigos de Huffman
+        self.huffman_codes = {}
+        
+        # Llama a get_huffman_codes con la raíz del árbol y una cadena vacía para los bits iniciales
+        self.get_huffman_codes(arbol, bits="")
+        
+        # Imprime el diccionario de códigos de Huffman
+        print(self.huffman_codes)
+
+        #for char, code in self.huffman_codes.items():
+         #   print(f"Caracter: {char}, Codigo Huffman: {code}")
+
+        #data_coded = self.codificar_huffman(mi_matriz)
+        #print(data_coded)
+        ############################################################
+
 
         tiempo = np.arange(len(audio_data)) / rate
         portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
