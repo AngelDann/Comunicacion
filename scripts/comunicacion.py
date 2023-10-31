@@ -35,7 +35,7 @@ def main(opcion=0):
     #Canal
     canal = Canal(walkie1, walkie2)
     print("Atenuacion:", canal.get_atenuacion())
-    canal.pasoInformacion(rate, señal_modulada)
+    canal.pasoInformacion(rate, señal_modulada, codificado)
 
     # Recepción
     walkie2.BotonRecibir('./scripts/audios/audio_modulado_ruido.wav', codificado, handshake)

@@ -5,6 +5,8 @@ import math
 
 class Canal:
     def __init__(self, walkie1, walkie2):
+        self.codificacion1 = walkie1.get_codificacion()
+        self.codificacion2 = walkie2.get_codificacion()
         potencia_fuente = walkie1.get_potencia()
         potencia_receptor = walkie2.get_potencia()
         distancia_fuente = walkie1.get_distancia_referencia()
@@ -14,8 +16,16 @@ class Canal:
 
         self.señal_transmitida = []
         self.num_aleatorios = []
+        self.canales = [[] for _ in range(5)] #Canales en total
+        self.probabilidades_ruido = [0.7, 0.2, 0.1, 0.4, 0.8] #La probabilidad de ruido que tiene cada canal
 
-    def pasoInformacion(self, rate, señal_modulada):
+    def pasoInformacion(self, rate, señal_modulada, codificado):
+        if self.codificacion1 == 0 and self.codificacion2 == 0:
+            self.procesarSeñalModulada(rate, señal_modulada)
+        else:
+            self.procesarCodificado(codificado)
+
+    def procesarSeñalModulada(self, rate, señal_modulada):
         duracion_segmento = 0.001
         duracion_total = len(señal_modulada) / float(rate)
         num_segmentos = int(np.ceil(duracion_total / duracion_segmento))
@@ -28,6 +38,31 @@ class Canal:
 
         self.calcular_entropia()
         self.guardar_audio(rate)
+
+    def procesarCodificado(self, codificado):
+        print(len(codificado))
+        i = 0
+        j = 0
+        while i < len(codificado):
+            elem = codificado[i]
+            if self.agregarRuidoEnCodificado(probabilidad=self.probabilidades_ruido[j]):
+                codificado = np.delete(codificado, i)
+                if j < len(self.canales)-1:
+                    j+=1 #Cambio de canal a otro que no tenga ruido
+                else:
+                    j = 0
+            else:
+                self.canales[j].append(elem) #Sigue en el mismo canal
+                i += 1
+        print(len(codificado))
+        for elem in self.canales:
+            print(len(elem))
+
+    def agregarRuidoEnCodificado(self, probabilidad):
+        # Si la probabilidad es menor que 0.06 (6%), se elimina el elemento
+        if r.random() < probabilidad:
+            return True
+        return False
 
     def agregar_ruido(self, segmento):
         aleatorio = r.randint(0,100)

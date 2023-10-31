@@ -22,3 +22,8 @@ mi_matriz = np.array([[1, 2, 3],
 
 codigo_aritmetico = codificacion.codificacionAritmetica(mi_matriz)
 print(codigo_aritmetico)
+
+array_vacio = [[] for _ in range(5)]
+
+print(array_vacio[5])
+

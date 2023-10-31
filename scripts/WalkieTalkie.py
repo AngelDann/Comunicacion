@@ -134,6 +134,9 @@ class WalkieTalkie:
         wavfile.write(audio_nombre, rate, señal_modulada.astype(np.int16))
         print(f"Archivo {audio_nombre} guardado")
 
+    def get_codificacion(self):
+        return self.codificacion
+
     def get_frecuencia_portadora(self):
         return self.frequencia_portadora
 
