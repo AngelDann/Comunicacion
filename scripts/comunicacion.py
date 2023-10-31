@@ -3,28 +3,44 @@ from WalkieTalkie import WalkieTalkie
 from Canal import Canal
 import random
 
-#Creacion de 2 walkie talkies para cada persona
-#El primer valor es la potencia y el segundo la distancia respecto al punto de referencia del walkie talkie
-#Se hace aleatoriamente la distancia desde el punto de referencia para que en el canal se pueda agregar el ruido
-walkie1 = WalkieTalkie(1, random.randint(500,2500))
-walkie2 = WalkieTalkie(1, random.randint(500,2500))
+def pedir_opcion():
+    opciones = ['Sin codificar', 'Huffman', 'Shannon']
+    while True:
+        print("Por favor, elige una opción:")
+        for i, opcion in enumerate(opciones, 0):
+            print(f"{i}. {opcion}")
+        eleccion = input("Ingresa el número de tu opción: ")
+        if eleccion in ['0', '1', '2']:
+            return int(eleccion)
+        else:
+            print("Entrada inválida. Por favor, ingresa un número del 1 al 3.")
 
-#Frecuencia AM
-print("Frecuencia de Walkie-Talkies: Walkie1=", walkie1.get_frecuencia_portadora(), "Walkie2=",walkie2.get_frecuencia_portadora())
+def main(opcion=0):
 
-#Fuente de Informacion
-rate,audio_data = walkie1.FuenteInformacion("scripts/alarm.wav")
+    #Creacion de 2 walkie talkies para cada persona
+    #El primer valor es la potencia y el segundo la distancia respecto al punto de referencia del walkie talkie
+    #Se hace aleatoriamente la distancia desde el punto de referencia para que en el canal se pueda agregar el ruido
+    walkie1 = WalkieTalkie(1, random.randint(500,2500), tipo_codificacion=opcion)
+    walkie2 = WalkieTalkie(1, random.randint(500,2500), tipo_codificacion=opcion)
 
-# Transmisión
-rate,señal_modulada = walkie1.BotonTransmitir(rate,audio_data)
+    #Frecuencia AM
+    print("Frecuencia de Walkie-Talkies: Walkie1=", walkie1.get_frecuencia_portadora(), "Walkie2=",walkie2.get_frecuencia_portadora())
 
-#Canal
-canal = Canal(walkie1, walkie2)
-print("Atenuacion:", canal.get_atenuacion())
-canal.agregar_ruido(rate, señal_modulada)
+    #Fuente de Informacion
+    rate,audio_data = walkie1.FuenteInformacion("./scripts/alarm.wav")
 
-# Recepción
-walkie2.BotonRecibir('scripts/audios/audio_modulado_ruido.wav')
+    # Transmisión
+    rate,señal_modulada, codificado, handshake = walkie1.BotonTransmitir(rate,audio_data)
 
-#Destino Final
-#walkie2.reproducir('scripts/audios/audio_recibido.wav')
+    #Canal
+    canal = Canal(walkie1, walkie2)
+    print("Atenuacion:", canal.get_atenuacion())
+    canal.pasoInformacion(rate, señal_modulada)
+
+    # Recepción
+    walkie2.BotonRecibir('./scripts/audios/audio_modulado_ruido.wav', codificado, handshake)
+
+    #Destino Final
+    #walkie2.reproducir('scripts/audios/audio_recibido.wav')
+
+main(pedir_opcion())

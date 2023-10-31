@@ -3,15 +3,19 @@ from scipy.io import wavfile
 import os
 from anytree import AnyNode, RenderTree, PreOrderIter
 from collections import Counter
+from Huffman import Huffman
+from Codificacion import Codificacion
 #import headp
 
 class WalkieTalkie:
-    def __init__(self, potencia=0.5, distancia_referencia=5000):
+    def __init__(self, potencia=0.5, distancia_referencia=5000, tipo_codificacion=0):
         self.bits = 16
         self.potencia = potencia
         self.distancia_referencia = distancia_referencia
         self.frequencia_portadora = 3e+7 #Frecuencia AM
-        self.huffman_codes = {}
+        self.tipo_codificacion = tipo_codificacion
+        self.huffman = Huffman()
+        self.codificacion = Codificacion()
 
 
     #Recibe un archivo stereo que transforma a mono para transmitir la informacion usando la frecuencia portadora
@@ -28,125 +32,80 @@ class WalkieTalkie:
             if numero % i == 0:
                 divisores.append(i)
         return divisores[round(len(divisores)/2)]
-    
-    def generarArbol(self, diccionario):
-        diccionario_sort = dict(sorted(diccionario.items(), key=lambda item: item[1]))
-        
-        #for elemento, frecuencia in diccionario_sort.items():
-            #print(f"Elemento: {elemento}, Frecuencia: {(frecuencia/longitud) *100}")
-        
-        cola = []
 
-        for elemento, frecuencia in diccionario_sort.items():
-            nodo = AnyNode(id=elemento,
-                           frecuencia=frecuencia,
-                            izquierda=None,
-                            derecha=None,
-                            bits= None,
-                            )
-            cola.append(nodo)
-        
-        i = 0
-        while len(cola) > 1:
-            
-            nodo_izquierda = cola.pop(0)
-            nodo_derecha = cola.pop(0)
-
-            nuevo_nodo = AnyNode(
-                id = f"{str(nodo_izquierda.frecuencia) + str(nodo_derecha.frecuencia)}",
-                frecuencia=nodo_izquierda.frecuencia + nodo_derecha.frecuencia, 
-                izquierda = nodo_izquierda, 
-                derecha = nodo_derecha,
-                bits = None
-            )
-            
-            #nuevo_nodo.izquierda = nodo_izquierda
-            #nuevo_nodo.derecha = nodo_derecha
-
-            cola.append(nuevo_nodo)
-            i+=1
-        
-        arbol_huffman = cola[0]
-
-        return arbol_huffman
-    
-    def get_huffman_codes(self, node, bits=""):
-        if node.izquierda is not None:
-            self.get_huffman_codes(node.izquierda, bits + '0')
-        if node.derecha is not None:
-            self.get_huffman_codes(node.derecha, bits + '1')
-        if len(str(node.frecuencia)) == 1:
-            self.huffman_codes[node.frecuencia] = bits
-
-
-
-    def BotonTransmitir(self, rate, audio_data):
-        # Proceso de conversión ADC
-        audio_data_normalized = audio_data / np.max(np.abs(audio_data))
-        audio_data_quantized = np.round(audio_data_normalized * (2**(self.bits - 1))).astype(np.int16)
-        
-        #print(RenderTree(arbol_huffman))
-        ##########################################################
-        # Supongamos que tienes una matriz NumPy
-        mi_matriz = np.array([[1, 2, 3],
-                            [1, 2, 3],
-                            [4, 5, 6],
-                            [1, 2, 3],
-                            [7, 8, 9]])
-
+    def crearDiccionario(self, informacion):
         # Usando np.unique con axis para encontrar sublistas únicas
-        sublistas_unicas, indices, conteos = np.unique(mi_matriz, axis=0, return_index=True, return_counts=True)
+        sublistas_unicas, indices, conteos = np.unique(informacion, axis=0, return_index=True, return_counts=True)
 
         # Crear un diccionario con las sublistas únicas y sus frecuencias
         diccionario_sublistas = {}
 
         for sublista, conteo in zip(sublistas_unicas, conteos):
             diccionario_sublistas[tuple(sublista)] = conteo
-
-        # Imprimir el diccionario
-        print(diccionario_sublistas)
-
-        arbol = self.generarArbol(diccionario_sublistas)
-        print(RenderTree(arbol))
-
-        # Inicializa el diccionario de códigos de Huffman
-        self.huffman_codes = {}
         
-        # Llama a get_huffman_codes con la raíz del árbol y una cadena vacía para los bits iniciales
-        self.get_huffman_codes(arbol, bits="")
-        
-        # Imprime el diccionario de códigos de Huffman
-        print(self.huffman_codes)
+        return diccionario_sublistas
+    
+    def codificacionInformacion(self, informacion):
+        longitud = len(informacion)
+        divisores = self.calcular_divisores(longitud)
+        print("La frecuencia mediana es:", divisores)
 
-        #for char, code in self.huffman_codes.items():
-         #   print(f"Caracter: {char}, Codigo Huffman: {code}")
+        informacion_split = np.array_split(informacion, divisores)
+        #Creo el diccionario para la codificacion
+        diccionario = self.crearDiccionario(informacion_split)
 
-        #data_coded = self.codificar_huffman(mi_matriz)
-        #print(data_coded)
-        ############################################################
+        #Genero el arbol
+        if self.tipo_codificacion == 1:
+            arbol = self.codificacion.generarArbolHuffman(diccionario)
+        elif self.tipo_codificacion == 2:
+            arbol = self.codificacion.generarArbolShannon(diccionario)
 
+        #Creo el handshake
+        self.codificacion.generarCodigos(arbol, bits="")
+        handshake = self.codificacion.get_codes()
+
+        #Se codifica toda la informacion
+        return self.codificacion.encoding(informacion_split, handshake), handshake
+
+    def BotonTransmitir(self, rate, audio_data):
+        # Proceso de conversión ADC
+        audio_data_normalized = audio_data / np.max(np.abs(audio_data))
+        audio_data_quantized = np.round(audio_data_normalized * (2**(self.bits - 1))).astype(np.int16)
 
         tiempo = np.arange(len(audio_data)) / rate
         portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
 
         # Modulación
         señal_modulada = audio_data_quantized * portadora
-        print(señal_modulada)
+        self.guardar_audio('./scripts/audios/audio_modulado.wav', rate, señal_modulada)
 
-        audio_nombre = 'scripts/audios/audio_modulado.wav'
-        wavfile.write( audio_nombre, rate, señal_modulada.astype(np.int16))
-        print(f"Archivo {audio_nombre} guardado")
-        
-        return rate,señal_modulada
+        if self.tipo_codificacion == 0:
+            codificado = None
+            handshake = None
+            return rate,señal_modulada, codificado, handshake
+        else:
+            codificado, handshake = self.codificacionInformacion(señal_modulada)
+            return rate,señal_modulada, codificado, handshake
 
-    def BotonRecibir(self, audio_nombre):
+    def BotonRecibir(self, audio_nombre, codificado=None, handshake=None):
         rate_received, señal_modulada_mono = wavfile.read(audio_nombre)
 
         tiempo = np.arange(len(señal_modulada_mono)) / rate_received
         portadora = np.cos(2 * np.pi * self.frequencia_portadora * tiempo)
 
-        # Demodulación
-        señal_demodulada = señal_modulada_mono / portadora
+        #Decodificacion
+        if self.tipo_codificacion == 0:
+            señal_demodulada = señal_modulada_mono / portadora
+        elif self.tipo_codificacion == 1:
+            # Demodulación
+            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, codificado)
+            #Como esta dividido se tiene que volver a hacer unidimensional
+            señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
+        elif self.tipo_codificacion == 2:
+             # Demodulación
+            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, codificado)
+            #Como esta dividido se tiene que volver a hacer unidimensional
+            señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
 
         # Conversión a valores originales
         audio_data_original = np.round(señal_demodulada).astype(np.int16)
@@ -154,9 +113,8 @@ class WalkieTalkie:
         # Creación de señal estéreo
         audio_data_original_stereo = np.column_stack((audio_data_original, audio_data_original))
 
-        audio_nombre_original = 'scripts/audios/audio_recibido.wav'
-        wavfile.write(audio_nombre_original, rate_received, audio_data_original_stereo)
-        print(f"Archivo {audio_nombre_original} guardado")
+        #Se guarda el archivo de audio
+        self.guardar_audio('./scripts/audios/audio_recibido.wav', rate_received, audio_data_original_stereo)
 
 
     def reproducir(self,audio_filename):
@@ -171,6 +129,10 @@ class WalkieTalkie:
                 print("No se pudo determinar el sistema operativo compatible.")
         except Exception as e:
             print(f"Error al reproducir el audio: {e}")
+
+    def guardar_audio(self, audio_nombre, rate, señal_modulada):
+        wavfile.write(audio_nombre, rate, señal_modulada.astype(np.int16))
+        print(f"Archivo {audio_nombre} guardado")
 
     def get_frecuencia_portadora(self):
         return self.frequencia_portadora
