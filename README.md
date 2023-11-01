@@ -1,5 +1,6 @@
 # Esquema-comunicacion
 Respositorio para la revision del esquema de comunicación
+Se tienen 2 codificaciones y la modulacion adaptativa
 
 ## Esquema de comunicacion walkir-talkie
 
