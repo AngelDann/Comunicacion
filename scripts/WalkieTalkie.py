@@ -87,7 +87,7 @@ class WalkieTalkie:
             codificado, handshake = self.codificacionInformacion(señal_modulada)
             return rate,señal_modulada, codificado, handshake
 
-    def BotonRecibir(self, audio_nombre, codificado=None, handshake=None):
+    def BotonRecibir(self, audio_nombre, codificado=None, handshake=None, lista_canales=None):
         rate_received, señal_modulada_mono = wavfile.read(audio_nombre)
 
         tiempo = np.arange(len(señal_modulada_mono)) / rate_received
@@ -98,10 +98,16 @@ class WalkieTalkie:
             señal_demodulada = señal_modulada_mono / portadora
         elif self.tipo_codificacion == 1:
             # Demodulación
-            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, codificado)
+            lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
+            lista_plana.sort(key=lambda tupla: tupla[0])
+            lista_final = [tupla[1] for tupla in lista_plana]
+            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, lista_final)
             #Como esta dividido se tiene que volver a hacer unidimensional
             señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
         elif self.tipo_codificacion == 2:
+            lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
+            lista_plana.sort(key=lambda tupla: tupla[0])
+            lista_final = [tupla[1] for tupla in lista_plana]
              # Demodulación
             señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, codificado)
             #Como esta dividido se tiene que volver a hacer unidimensional

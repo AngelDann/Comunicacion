@@ -19,11 +19,12 @@ class Canal:
         self.canales = [[] for _ in range(5)] #Canales en total
         self.probabilidades_ruido = [0.7, 0.2, 0.1, 0.4, 0.8] #La probabilidad de ruido que tiene cada canal
 
-    def pasoInformacion(self, rate, señal_modulada, codificado):
-        if self.codificacion1 == 0 and self.codificacion2 == 0:
+    def pasoInformacion(self, rate, señal_modulada, codificado, opcion):
+        if opcion == 0:
             self.procesarSeñalModulada(rate, señal_modulada)
         else:
             self.procesarCodificado(codificado)
+            return self.canales
 
     def procesarSeñalModulada(self, rate, señal_modulada):
         duracion_segmento = 0.001
@@ -40,7 +41,6 @@ class Canal:
         self.guardar_audio(rate)
 
     def procesarCodificado(self, codificado):
-        print(len(codificado))
         i = 0
         j = 0
         while i < len(codificado):
@@ -49,14 +49,16 @@ class Canal:
                 codificado = np.delete(codificado, i)
                 if j < len(self.canales)-1:
                     j+=1 #Cambio de canal a otro que no tenga ruido
+                    self.canales[j].append((i, elem))
                 else:
                     j = 0
+                    self.canales[j].append((i, elem))
             else:
-                self.canales[j].append(elem) #Sigue en el mismo canal
+                self.canales[j].append((i, elem)) #Sigue en el mismo canal
                 i += 1
-        print(len(codificado))
-        for elem in self.canales:
-            print(len(elem))
+        for i in range(len(self.canales)):
+            print(f"Canal {i} tiene {len(self.canales[i])} paquetes")
+        return self.canales
 
     def agregarRuidoEnCodificado(self, probabilidad):
         # Si la probabilidad es menor que 0.06 (6%), se elimina el elemento
@@ -90,7 +92,7 @@ class Canal:
 
     def guardar_audio(self, rate):
         #La señal con ruido se vuelve a convertir en array para la transformacion en audio       
-        print("Max:",max(self.num_aleatorios), "Min:", min(self.num_aleatorios), "Longitud:", len(self.num_aleatorios))
+        #print("Max:",max(self.num_aleatorios), "Min:", min(self.num_aleatorios), "Longitud:", len(self.num_aleatorios))
         señal_transmitida = np.array(self.señal_transmitida)
 
         # Tomar el valor de atenuación y agregar ruido

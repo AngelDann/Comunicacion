@@ -30,15 +30,18 @@ def main(opcion=0):
     rate,audio_data = walkie1.FuenteInformacion("./scripts/alarm.wav")
 
     # Transmisión
+    #El valor de codificado lo sue para pruebas pero no se usa
+    #Se usa la lista_canales con los paquetes para ordenarlos y transfromarlo de vuelta a la original
     rate,señal_modulada, codificado, handshake = walkie1.BotonTransmitir(rate,audio_data)
 
     #Canal
+    print(opcion)
     canal = Canal(walkie1, walkie2)
     print("Atenuacion:", canal.get_atenuacion())
-    canal.pasoInformacion(rate, señal_modulada, codificado)
+    lista_canales = canal.pasoInformacion(rate, señal_modulada, codificado, opcion=opcion)
 
     # Recepción
-    walkie2.BotonRecibir('./scripts/audios/audio_modulado_ruido.wav', codificado, handshake)
+    walkie2.BotonRecibir('./scripts/audios/audio_modulado_ruido.wav', codificado, handshake, lista_canales)
 
     #Destino Final
     #walkie2.reproducir('scripts/audios/audio_recibido.wav')
