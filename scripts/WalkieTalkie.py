@@ -3,7 +3,6 @@ from scipy.io import wavfile
 import os
 from anytree import AnyNode, RenderTree, PreOrderIter
 from collections import Counter
-from Huffman import Huffman
 from Codificacion import Codificacion
 #import headp
 
@@ -14,7 +13,6 @@ class WalkieTalkie:
         self.distancia_referencia = distancia_referencia
         self.frequencia_portadora = 3e+7 #Frecuencia AM
         self.tipo_codificacion = tipo_codificacion
-        self.huffman = Huffman()
         self.codificacion = Codificacion()
 
 
