@@ -99,6 +99,7 @@ class WalkieTalkie:
             lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
             lista_plana.sort(key=lambda tupla: tupla[0])
             lista_final = [tupla[1] for tupla in lista_plana]
+            #print(handshake)
             señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, lista_final)
             #Como esta dividido se tiene que volver a hacer unidimensional
             señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora

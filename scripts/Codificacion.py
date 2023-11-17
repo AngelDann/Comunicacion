@@ -1,10 +1,13 @@
 from anytree import AnyNode, RenderTree, PreOrderIter
 import numpy as np
+import hashlib
+import chunk
 
 class Codificacion:
     def __init__(self):
         self.codes = {}
         self.binary = np.array([], dtype=tuple)
+        self.secret = self.get_secret()
     
     def generarArbolShannon(self, diccionario):
         return self._generarArbol(diccionario, reverse=True)
@@ -60,17 +63,37 @@ class Codificacion:
         if node.esHoja:
             self.codes[node.id] = bits
 
+    def calcularHash(self, chunk, palabra_secreta):
+        # Convertir la información a un numpy array
+        chunk = np.array(chunk)
+        # Convertir la información a bytes
+        chunk_bytes = chunk.tobytes()
+
+        #Se hace el objeto hash con la palabra secreta
+        hash_obj = hashlib.sha256()
+        hash_obj.update(palabra_secreta.encode('utf-8'))
+        hash_obj.update(chunk_bytes)
+
+        # Obtener el hash
+        hash_resultado = hash_obj.hexdigest()
+
+        return hash_resultado
+
     def encoding(self, information, codes):
         for chunk in information:
-            #print(chunk)
-            self.binary = np.append(self.binary, codes[tuple(chunk)])
+            # Calcular el hash de cada chunk con la palabra secreta
+            hash_chunk = self.calcularHash(chunk, self.secret)
+            #print(hash_chunk)
+            self.binary = np.append(self.binary, codes[tuple(chunk)])  # Usar hash_chunk como clave
         #print('Info in binary:', self.binary)
         return self.binary
 
-
     def decoding(self, codes, binary):
         decode_text = []
-        reverse_codes = {v: k for k, v in codes.items()}  # Invertir el diccionario 'codes'
+        nuevo_dict = {self.calcularHash(k, self.secret): v for k, v in codes.items()}
+        reverse_codes = {v: k for k, v in nuevo_dict.items()}  # Invertir el diccionario 'codes'
+        for i, elem in nuevo_dict.items():
+            print("i =", i, "elem =", elem)
         for bit in binary:
             if bit in reverse_codes:
                 decode_text.append(reverse_codes[bit])  # Agregar el valor decodificado a 'decode_text'
@@ -129,3 +152,9 @@ class Codificacion:
                     break
 
         return matriz_decodificada
+    
+    def get_secret(self):
+        with open('scripts/SecretKey.txt', 'r') as archivo:
+    # Leer el contenido del archivo y almacenarlo en un string
+            contenido = archivo.read()
+        return contenido
