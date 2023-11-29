@@ -4,16 +4,16 @@ from Canal import Canal
 import random
 
 def pedir_opcion():
-    opciones = ['Sin codificar', 'Huffman', 'Shannon']
+    opciones = ['Sin codificar', 'Huffman', 'Shannon','Base64','RLL']
     while True:
         print("Por favor, elige una opción:")
         for i, opcion in enumerate(opciones, 0):
             print(f"{i}. {opcion}")
         eleccion = input("Ingresa el número de tu opción: ")
-        if eleccion in ['0', '1', '2']:
+        if eleccion in ['0', '1', '2','3', '4']:
             return int(eleccion)
         else:
-            print("Entrada inválida. Por favor, ingresa un número del 1 al 3.")
+            print("Entrada inválida. Por favor, ingresa un número del 0 al 3.")
 
 def main(opcion=0):
 

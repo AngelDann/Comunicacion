@@ -55,15 +55,27 @@ class WalkieTalkie:
         #Genero el arbol
         if self.tipo_codificacion == 1:
             arbol = self.codificacion.generarArbolHuffman(diccionario)
+            #Creo el handshake
+            self.codificacion.generarCodigos(arbol, bits="")
+            handshake = self.codificacion.get_codes()
+            return self.codificacion.encoding(informacion_split, handshake), handshake
+        
         elif self.tipo_codificacion == 2:
             arbol = self.codificacion.generarArbolShannon(diccionario)
+            #Creo el handshake
+            self.codificacion.generarCodigos(arbol, bits="")
+            handshake = self.codificacion.get_codes()
+            return self.codificacion.encoding(informacion_split, handshake), handshake
+        
+        elif self.tipo_codificacion == 3:
+            informacion_b64 = self.codificacion.encriptarB64(informacion_split)
+            handshake = self.codificacion.handshakeB64(diccionario)
+            return informacion_b64, handshake
+        
+        elif self.tipo_codificacion == 4:
+            informacion_RLL = self.codificacion.encriptarRLL(informacion_split)
+            return informacion_RLL, None
 
-        #Creo el handshake
-        self.codificacion.generarCodigos(arbol, bits="")
-        handshake = self.codificacion.get_codes()
-
-        #Se codifica toda la informacion
-        return self.codificacion.encoding(informacion_split, handshake), handshake
 
     def BotonTransmitir(self, rate, audio_data):
         # Proceso de conversión ADC
@@ -100,8 +112,7 @@ class WalkieTalkie:
             lista_plana.sort(key=lambda tupla: tupla[0])
             lista_final = [tupla[1] for tupla in lista_plana]
             #print(handshake)
-            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, lista_final)
-            #Como esta dividido se tiene que volver a hacer unidimensional
+            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, lista_final)#Como esta dividido se tiene que volver a hacer unidimensional
             señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
         elif self.tipo_codificacion == 2:
             lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
@@ -110,6 +121,18 @@ class WalkieTalkie:
              # Demodulación
             señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, codificado)
             #Como esta dividido se tiene que volver a hacer unidimensional
+            señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
+        elif self.tipo_codificacion == 3:
+            lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
+            lista_plana.sort(key=lambda tupla: tupla[0])
+            lista_final = [tupla[1] for tupla in lista_plana]
+            señal_modulada_mono_decodificada = self.codificacion.decodingB64(handshake, codificado)
+            señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
+        elif self.tipo_codificacion == 4:
+            lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
+            lista_plana.sort(key=lambda tupla: tupla[0])
+            lista_final = [tupla[1] for tupla in lista_plana]
+            señal_modulada_mono_decodificada = self.codificacion.decodificarRLL(codificado)
             señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
 
         # Conversión a valores originales
