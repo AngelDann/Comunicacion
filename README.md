@@ -2,7 +2,7 @@
 Respositorio para la revision del esquema de comunicación
 Se tienen 2 codificaciones y la modulacion adaptativa
 
-## Esquema de comunicacion walkir-talkie
+## Esquema de comunicacion walkie-talkie
 
 * Fuente de información: Voz de una persona.
 * Transmisor: El walkie-talkie que toma la voz de la persona, la transforma en señal eléctrica conviertiendola en una onda. Hace un producto de esa con la onda portadora creando así la onda de amplitud modulada (AM).
@@ -11,89 +11,108 @@ Se tienen 2 codificaciones y la modulacion adaptativa
 * Receptor: El segundo walkie-talkie que toma la señal, quita la onda portadora y se queda con la onda de informacion.
 * Destino: el Walkie-takie reproduce la información que recibe.
 
-## Proceso
-El proceso que sigue el codigo para simular la comunicacion es el siguiente:
-* Primero se le pregunta al usuario si quiere hacer la comunicacion con alguna codificacion o sin codificacion.
-* Se crean los WalkieTalkies con sus parametros (solo es relevante saber la opcion que manejan)
+## Proceso con Hash
+El tipo de codificación que tiene el hasheo es la que se hace con base64.
+* Codificar informacion
 
-**Sin codificacion**
-
-1.- El WalkieTalkie crea la Fuente de Informacion que es el audio alarma.wav y lo transforma a un arreglo mono.
-  
-2.- El WalkieTalkie transmite la informaicon y devuelve las variables rate, señal_modulada.
-
-3.- El canal usa la señal modulada para pasarlo por segmentos y agregar ruido (que es multiplicarlo) con un 6% de probabilidad en cada segmento.
-
-4.- El canal guarda este nuevo audio modulado con ruido.
-
-5.- El receptor toma el audio con ruido, lo desmoluda y finalmente obtiene la información original que guarda en otro archivo.
-
-**Con codificacion**
-
-1.- El WalkieTalkie crea la Fuente de Informacion que es el audio alarma.wav y lo transforma a un arreglo mono.
-
-2.- El WalkieTalkie transmite la informacion según la opción que se eligió, si es Huffman devolverá la información codificada y su handshake para poder descodificarlo.
-
-3.- El canal usa la modulación adaptativa para poder transmitir los datos a través de distintos canales que tienen una probabilidad de generar ruido distinta.
-
->self.canales = [[] for _ in range(5)] #Canales en total
-
->self.probabilidades_ruido = [0.7, 0.2, 0.1, 0.4, 0.8] #La probabilidad de ruido que tiene cada canal
-
-4.- Laa modulación adaptativa ocurre cuando se identifica que hay ruido en ese canal y luego se cambia a otro para poder guardar la información.
-```
-            if self.agregarRuidoEnCodificado(probabilidad=self.probabilidades_ruido[j]):
-                codificado = np.delete(codificado, i)
-                if j < len(self.canales)-1:
-                    j+=1 #Cambio de canal a otro que no tenga ruido
-                    self.canales[j].append((i, elem))
-                else:
-                    j = 0
-                    self.canales[j].append((i, elem))
-            else:
-                self.canales[j].append((i, elem)) #Sigue en el mismo canal
-                i += 1
+Lo que se hace es que cada paquete de la información se transforma a una codifiacion base64, luego se hace el hasheo de la información usando la palabra secreta que está en el archivo SecretKey.txt. Finalmente todo se guarda en information_hash y se retorna.
 
 ```
-![image](https://github.com/AngelDann/Comunicacion/assets/147886154/ecaf79a7-59ec-434e-877b-f00ef5925355)
+    def encriptarB64(self, information):
+        information_hash = []
+        for chunk in information:
+            chunk_b64 = self.encode_numpy_array_to_base64(chunk)
+            hash_chunk = self.calcularHash(chunk_b64, self.secret)
+            information_hash.append(hash_chunk)
+        return information_hash
 
-5.- El Receptor se encarga de tomar estos canales, ordenar la información a como estaba originalmente
+    def calcularHash(self, chunk, palabra_secreta):
+        # Convertir la información a un numpy array
+        chunk = np.array(chunk)
+        # Convertir la información a bytes
+        chunk_bytes = chunk.tobytes()
+        #Se hace el objeto hash con la palabra secreta
+        hash_obj = hashlib.sha256()
+        hash_obj.update(palabra_secreta.encode('utf-8'))
+        hash_obj.update(chunk_bytes)
+        # Obtener el hash
+        hash_resultado = hash_obj.hexdigest()
+```
+En este caso para el handshake se usa el diccionario de frecuencias y se cambia las frecuencias por la información original en base64. Este es el handshake que se manda al Receptor:
 
 ```
-# Demodulación
-            lista_plana = [tupla for sublista in lista_canales for tupla in sublista]
-            lista_plana.sort(key=lambda tupla: tupla[0])
-            lista_final = [tupla[1] for tupla in lista_plana]
-            señal_modulada_mono_decodificada = self.codificacion.decoding(handshake, lista_final)
-            #Como esta dividido se tiene que volver a hacer unidimensional
-            señal_demodulada = señal_modulada_mono_decodificada.flatten() / portadora
-
+    def handshakeB64(self, diccionario):
+        for arr in diccionario:
+            # Codificar la clave a base64 y usarla como el nuevo valor
+            diccionario[arr] = self.tuple_to_base64(arr)
+        return diccionario
 ```
-6.- Y finalmente la informacion se guarda en el archivo.
-````
-        # Conversión a valores originales
-        audio_data_original = np.round(señal_demodulada).astype(np.int16)
+Estructura del handshake:
+```
+{
+  informacion_original : informacion_base64
+}
+```
 
-        # Creación de señal estéreo
-        audio_data_original_stereo = np.column_stack((audio_data_original, audio_data_original))
+* Decodificar información
 
-        #Se guarda el archivo de audio
-        self.guardar_audio('./scripts/audios/audio_recibido.wav', rate_received, audio_data_original_stereo)
+Para regresar la información a su estado original lo que se hace es hashear la información que está en base64 del handshake:
+```
+reverse_codes = {v: k for k, v in handshake.items()}
 
-````
+{
+  informacion_original : informacion_hash
+}
+```
+Luego se invierten las keys porque vamos a usar el hash para encontrar la información original:
+```
+nuevo_dict = {self.calcularHash(k, self.secret): v for k, v in reverse_codes.items()}
+
+{
+  informacion_hash : informacion_original 
+}
+```
+Y cuando está listo se hace lo necesario para usar la búsqueda binaria, encontrar el valor original y agregarlo a una lista con toda la información original.
+```
+    def decodingB64(self, handshake, codificado):
+        decode_text = []
+        reverse_codes = {v: k for k, v in handshake.items()}
+        nuevo_dict = {self.calcularHash(k, self.secret): v for k, v in reverse_codes.items()}
+        keys_list = sorted(nuevo_dict.keys())
+        for elem in codificado:
+            indice = self.busqueda_binaria(keys_list, elem)
+            if indice != -1:
+                decode_text.append(nuevo_dict[keys_list[indice]])
+        return np.array(decode_text)
+```
+
+* Extra
+
+Como ya se está usando un diccionario es incluso más rápido y sencillo usar el mismo diccionario y la clave para encontrar el hash, siempre y cuando no se use el salt.
+```
+    def decodingB64_2(self, handshake, codificado):
+        decode_text = []
+        reverse_codes = {v: k for k, v in handshake.items()}
+        nuevo_dict = {self.calcularHash(k, self.secret): v for k, v in reverse_codes.items()}
+        for elem in codificado:
+            if elem in nuevo_dict:
+                decode_text.append(nuevo_dict[elem])
+        return np.array(decode_text)
+```
 
 ## Codigo
-El codigo tiene 2 tipo de codificaciones y la modulacion adaptativa.
+El codigo tiene 3 tipos de codificaciones y la modulacion adaptativa.
 
 ### Comunicacion
 Este codigo es el principal donde se simula la comunicacion. Se le pide al usuario que seleccione alguna codificacion para que comience el proceso.
 
-![image](https://github.com/AngelDann/Comunicacion/assets/147886154/3077c0e4-0d70-482d-8981-0f08ae9586b7)
+![image](https://github.com/AngelDann/Comunicacion/assets/147886154/14b29963-6b5d-4890-8217-a80abb575579)
 
 ### Clase codificacion
-Contiene dos tiposs de codificaciones funcionales:
+Contiene tres tiposs de codificaciones funcionales:
 * Huffman
 * Shannon Fanno
+* Base64
 El proceso que sigue es formar un arbol binario a partir de un diccionario de frecuencias que genera el Transmisor, tambien tiene funcion llamada "generarCodigos" para hacer el diccionario que se usa como handshake para que el Receptor pueda desencriptar la informacion.
 
 ### Clase WalkieTalkie
