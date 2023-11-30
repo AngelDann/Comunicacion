@@ -45,7 +45,7 @@ class Canal:
         j = 0
         while i < len(codificado):
             elem = codificado[i]
-            print(elem)
+            #print(elem)
             if self.agregarRuidoEnCodificado(probabilidad=self.probabilidades_ruido[j]):
                 codificado = np.delete(codificado, i)
                 if j < len(self.canales)-1:

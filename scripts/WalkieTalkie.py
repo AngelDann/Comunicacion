@@ -73,7 +73,7 @@ class WalkieTalkie:
             return informacion_b64, handshake
         
         elif self.tipo_codificacion == 4:
-            informacion_RLL = self.codificacion.encriptarRLL(informacion_split)
+            informacion_RLL = self.codificacion.encriptarRLL(diccionario)
             return informacion_RLL, None
 
 

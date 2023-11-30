@@ -110,7 +110,7 @@ class Codificacion:
 
     def encriptarB64(self, information):
         information_hash = []
-        print(information.pop())
+        #print(information.pop())
         for chunk in information:
             chunk_b64 = self.encode_numpy_array_to_base64(chunk)
             hash_chunk = self.calcularHash(chunk_b64, self.secret)
@@ -159,7 +159,7 @@ class Codificacion:
                 decode_text.append(nuevo_dict[keys_list[indice]])
         return np.array(decode_text)
 
-    def decodingB642(self, handshake, codificado):
+    def decodingB64_2(self, handshake, codificado):
         decode_text = []
         reverse_codes = {v: k for k, v in handshake.items()}
         nuevo_dict = {self.calcularHash(k, self.secret): v for k, v in reverse_codes.items()}
@@ -169,46 +169,22 @@ class Codificacion:
         return np.array(decode_text)
     
     def encriptarRLL(self, information):
-        def run_length_encoding(input_string):
-            count = 1
-            prev = ""
-            lst = []
-            for character in input_string:
-                if character != prev:
-                    if prev:
-                        entry = (prev,count)
-                        lst.append(entry)
-                    count = 1
-                    prev = character
-                else:
-                    count += 1
-            else:
-                entry = (character,count)
-                lst.append(entry)
-            return lst
+        rll = []
+        for tupla, conteo in information.items():
+        # Añadimos el conteo y la tupla a la cadena RLL
+            rll.append(np.append(tupla, conteo))
+        return rll
 
-        # Convertir los arrays de NumPy a cadenas
-        string_information = [''.join(map(str, np_array)) for np_array in information]
-        # Calcular la frecuencia de cada array en la lista
-        frequency = Counter(string_information)
-        # Aplicar la compresión RLL a las frecuencias
-        compressed = run_length_encoding(''.join(frequency.elements()))
-        return compressed
-
-    def decodificarRLL(self, compressed):
-        # Inicializar una lista vacía para almacenar los arrays decodificados
-        decoded = []
-
-        # Iterar sobre cada tupla en la lista comprimida
-        for array_string, count in compressed:
-            # Convertir la cadena a un array de NumPy
-            numpy_array = np.array([int(char) for char in array_string])
-
-            # Añadir el array a la lista 'decoded' el número de veces especificado por 'count'
-            for _ in range(count):
-                decoded.append(numpy_array)
-
-        return decoded
+    def decodificarRLL(self, rll):
+        information = []
+        for item in rll:
+            # Separamos el conteo y la tupla
+            conteo = item[0]
+            tupla = item[1]
+            # Añadimos la tupla y el conteo al diccionario
+            for i in range(conteo):  # Usa range(conteo) en lugar de range(0, conteo+1)
+                information.append(tupla)
+        return np.array(information)
 
     def get_codes(self):
         return self.codes
